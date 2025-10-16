@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users: only self read/write
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Lists: readable/writable only by owners
+    match /lists/{listId} {
+      allow read, write: if request.auth != null && request.auth.uid in resource.data.ownerUids;
+    }
+
+    // List items: enforce ownership via parent list
+    match /listItems/{itemId} {
+      allow read, write: if request.auth != null && isOwnerOfList(resource.data.listId);
+    }
+
+    function isOwnerOfList(listId) {
+      return exists(/databases/$(database)/documents/lists/$(listId))
+        && request.auth.uid in get(/databases/$(database)/documents/lists/$(listId)).data.ownerUids;
+    }
+  }
+}
+

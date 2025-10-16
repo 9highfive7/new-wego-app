@@ -1,0 +1,19 @@
+{
+  "name": "wego-functions",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": { "node": "20" },
+  "main": "lib/index.js",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.5.0",
+    "firebase-functions": "^6.0.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "type": "module"
+}
