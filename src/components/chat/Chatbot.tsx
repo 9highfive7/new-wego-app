@@ -72,14 +72,26 @@ function ChatModal({ onClose }: { onClose: () => void }) {
       }
       if (!answered) {
         const t1 = performance.now()
-        const result = await api.aiSuggest({ preferences: { prompt: content }, location: loc })
-        dlog('chat', 'callable done', { elapsed: Math.round(performance.now() - t1) })
-        const txt = formatSuggestions(result.data.suggestions, 'おすすめの場所')
-        setMsgs((m) => [...m, { role: 'assistant', text: txt }])
+        try {
+          const result = await api.aiSuggest({ preferences: { prompt: content }, location: loc })
+          dlog('chat', 'callable done', { elapsed: Math.round(performance.now() - t1) })
+          const txt = formatSuggestions(result.data.suggestions, 'おすすめの場所')
+          setMsgs((m) => [...m, { role: 'assistant', text: txt }])
+        } catch (callableError: any) {
+          dlog('chat', 'callable failed', { error: callableError?.message })
+          // テスト用のフォールバック応答
+          if (import.meta.env.DEV) {
+            const testSuggestions = generateTestSuggestions(content)
+            const txt = formatSuggestions(testSuggestions, 'おすすめの場所 (テストモード)')
+            setMsgs((m) => [...m, { role: 'assistant', text: txt }])
+          } else {
+            setMsgs((m) => [...m, { role: 'assistant', text: 'AIサービスに接続できませんでした。設定を確認するか、時間をおいてお試しください。' }])
+          }
+        }
       }
-    } catch {
+    } catch (error: any) {
       setMsgs((m) => [...m, { role: 'assistant', text: 'エラーが発生しました。時間をおいてお試しください。' }])
-      dlog('chat', 'unexpected error in send')
+      dlog('chat', 'unexpected error in send', { error: error?.message })
     } finally {
       setLoading(false)
     }
@@ -162,4 +174,37 @@ function getCurrentLoc(): Promise<{ lat: number; lng: number } | undefined> {
       { enableHighAccuracy: true, timeout: 5000 },
     )
   })
+}
+
+// テスト用の提案生成関数
+function generateTestSuggestions(prompt: string): { query: string; reason?: string }[] {
+  const lowerPrompt = prompt.toLowerCase()
+  
+  // キーワードに基づいた提案
+  if (lowerPrompt.includes('池袋') || lowerPrompt.includes('いけぶくろ')) {
+    return [
+      { query: 'サンシャイン水族館', reason: '屋上のペンギンやアシカが人気' },
+      { query: '池袋パルコ', reason: 'ショッピングやカフェを楽しめます' },
+      { query: 'ナンジャタウン', reason: 'アニメ・ゲームショップが充実' }
+    ]
+  } else if (lowerPrompt.includes('渋谷') || lowerPrompt.includes('しぶや')) {
+    return [
+      { query: '渋谷スクランブルスクエア', reason: '展望台からの景色が最高' },
+      { query: 'ミヤシタパーク', reason: 'イベントやカフェが楽しめる公園' },
+      { query: '渋谷パルコ', reason: '最新のファッションや雑貨' }
+    ]
+  } else if (lowerPrompt.includes('カフェ') || lowerPrompt.includes('コーヒー')) {
+    return [
+      { query: 'ブルーボトルコーヒー', reason: '世界各地のコーヒーが楽しめる' },
+      { query: 'スターバックス リザーブ', reason: '高級感ある空間とコーヒー' },
+      { query: '猫カフェてまりや', reason: '猫と触れ合える癒しカフェ' }
+    ]
+  } else {
+    // デフォルトの提案
+    return [
+      { query: '東京スカイツリー', reason: '高さ634mの展望台' },
+      { query: '浅草寺', reason: '伝統的な観光地と仲見世通り' },
+      { query: 'チームラボ プラネッツ', reason: 'デジタルアートミュージアム' }
+    ]
+  }
 }

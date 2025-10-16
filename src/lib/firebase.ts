@@ -25,8 +25,30 @@ function readEnv(): Env {
     'VITE_FIREBASE_MESSAGING_SENDER_ID',
     'VITE_FIREBASE_APP_ID',
   ] as const
+  
+  const missing: string[] = []
   for (const k of required) {
-    if (!e[k]) throw new Error(`Missing env: ${k}`)
+    if (!e[k]) {
+      missing.push(k)
+      console.warn(`Missing Firebase config: ${k}`)
+    }
+  }
+  
+  if (missing.length > 0) {
+    console.error('Firebase configuration incomplete. Missing:', missing)
+    // Development環境ではダミー値を使用
+    if (import.meta.env.DEV) {
+      console.warn('Using dummy Firebase config for development')
+      return {
+        VITE_FIREBASE_API_KEY: e.VITE_FIREBASE_API_KEY || 'dummy-api-key',
+        VITE_FIREBASE_AUTH_DOMAIN: e.VITE_FIREBASE_AUTH_DOMAIN || 'dummy.firebaseapp.com',
+        VITE_FIREBASE_PROJECT_ID: e.VITE_FIREBASE_PROJECT_ID || 'dummy-project',
+        VITE_FIREBASE_STORAGE_BUCKET: e.VITE_FIREBASE_STORAGE_BUCKET || 'dummy.appspot.com',
+        VITE_FIREBASE_MESSAGING_SENDER_ID: e.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789',
+        VITE_FIREBASE_APP_ID: e.VITE_FIREBASE_APP_ID || '1:123456789:web:dummy'
+      }
+    }
+    throw new Error(`Missing Firebase configuration: ${missing.join(', ')}`)
   }
   // Type assertion is safe after checks
   return e as unknown as Env
