@@ -10,6 +10,7 @@ import { loadGoogle } from './lib/maps'
 import { AISuggester } from './components/AISuggester'
 import { ListManager } from './components/lists/ListManager'
 import { Chatbot } from './components/chat/Chatbot'
+import { DebugPanel } from './components/DebugPanel'
 
 function SignIn() {
   const [email, setEmail] = useState('')
@@ -263,6 +264,7 @@ function AuthedApp({ user }: { user: import('firebase/auth').User }) {
       <NavBar userName={user.displayName || user.email} />
       <Dashboard />
       <Chatbot />
+      <DebugPanel />
     </>
   )
 }

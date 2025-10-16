@@ -6,8 +6,11 @@ import { Button } from './ui/button'
 export function AISuggester() {
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<{ query: string; reason?: string }[]>([])
+  const [error, setError] = useState<string | null>(null)
+  
   const run = async () => {
     setLoading(true)
+    setError(null)
     try {
       const pos = await new Promise<GeolocationPosition | null>((res) => {
         if (!navigator.geolocation) return res(null)
@@ -38,10 +41,27 @@ export function AISuggester() {
       }
       if (!answered) {
         const t1 = performance.now()
-        const result = await api.aiSuggest({ preferences: {}, location: loc })
-        dlog('suggest', 'callable done', { elapsed: Math.round(performance.now() - t1) })
-        setSuggestions(result.data.suggestions || [])
+        try {
+          const result = await api.aiSuggest({ preferences: {}, location: loc })
+          dlog('suggest', 'callable done', { elapsed: Math.round(performance.now() - t1) })
+          setSuggestions(result.data.suggestions || [])
+        } catch (callableError: any) {
+          dlog('suggest', 'callable failed', { error: callableError?.message })
+          setError('AI提案の取得に失敗しました。設定を確認してください。')
+          // テスト用のダミーデータを提供
+          if (import.meta.env.DEV) {
+            setSuggestions([
+              { query: '渋谷スクランブルスクエア', reason: '展望台からの眺めが最高です' },
+              { query: '代官山 蔦屋書店', reason: 'ゆったり読書やカフェを楽しめます' },
+              { query: '明治神宮', reason: '都心の中の静かな癒しスポット' }
+            ])
+            setError('テストモード: ダミーデータを表示しています')
+          }
+        }
       }
+    } catch (error: any) {
+      dlog('suggest', 'unexpected error', { error: error?.message })
+      setError('予期しないエラーが発生しました')
     } finally {
       setLoading(false)
     }
@@ -52,6 +72,11 @@ export function AISuggester() {
         <h3 className="font-medium">AIおすすめ</h3>
         <Button onClick={run} disabled={loading}>{loading ? '考え中…' : '提案を取得'}</Button>
       </div>
+      {error && (
+        <div className={`rounded-md p-2 text-sm ${import.meta.env.DEV ? 'bg-yellow-50 text-yellow-800' : 'bg-red-50 text-red-600'}`}>
+          {error}
+        </div>
+      )}
       <ul className="space-y-2">
         {suggestions.map((s, i) => (
           <li key={i} className="rounded-md border p-2">
